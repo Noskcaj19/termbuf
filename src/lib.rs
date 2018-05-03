@@ -23,7 +23,7 @@ pub struct TermBuf {
     pub terminal: AlternateScreen<RawTerminal<Stdout>>,
     pub size: TermSize,
     pub cursor: bool,
-    pub cursor_pos: (u16, u16),
+    pub cursor_pos: (usize, usize),
     buffer: Vec<Vec<TermCell>>,
     prev_buffer: Vec<Vec<TermCell>>,
 }
@@ -78,7 +78,7 @@ impl TermBuf {
             write!(
                 self.terminal,
                 "{}",
-                termion::cursor::Goto(self.cursor_pos.0, self.cursor_pos.1)
+                termion::cursor::Goto(self.cursor_pos.0 as u16, self.cursor_pos.1 as u16)
             )?;
         }
         self.terminal.flush()?;
@@ -105,7 +105,7 @@ impl TermBuf {
     }
 
     /// Sets cursor position
-    pub fn set_cursor_position(&mut self, x: u16, y: u16) {
+    pub fn set_cursor_position(&mut self, x: usize, y: usize) {
         self.cursor_pos = (x, y);
     }
 
