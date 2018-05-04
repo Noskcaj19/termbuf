@@ -21,7 +21,6 @@ pub struct TermCell {
 
 pub struct TermBuf {
     pub terminal: AlternateScreen<RawTerminal<Stdout>>,
-    pub size: TermSize,
     pub cursor: bool,
     pub cursor_pos: (usize, usize),
     buffer: Vec<Vec<TermCell>>,
@@ -31,14 +30,13 @@ pub struct TermBuf {
 impl TermBuf {
     /// Creates a new TermBuf and switches to raw mode
     pub fn init() -> Result<TermBuf, Error> {
-        let size = Self::size()?;
+        let size = termion::terminal_size()?;
         Ok(TermBuf {
             terminal: AlternateScreen::from(stdout().into_raw_mode()?),
-            size: size,
             cursor: true,
             cursor_pos: (1, 1),
-            buffer: vec![vec![TermCell { content: ' ' }; size.width]; size.height],
-            prev_buffer: vec![vec![TermCell { content: ' ' }; size.width]; size.height],
+            buffer: vec![vec![TermCell { content: ' ' }; size.0 as usize]; size.1 as usize],
+            prev_buffer: vec![vec![TermCell { content: ' ' }; size.0 as usize]; size.1 as usize],
         })
     }
 
@@ -61,16 +59,26 @@ impl TermBuf {
 
     /// Draw internal buffer to the terminal
     pub fn draw(&mut self) -> Result<(), Error> {
-        // write!(self.terminal, "{}", termion::clear::All)?;
         for (y, line) in self.buffer.iter().enumerate() {
-            if *line != self.prev_buffer[y] {
+            if line.iter().all(|x| *x == TermCell { content: ' ' }) {
+                write!(
+                    self.terminal,
+                    "{}{}",
+                    termion::cursor::Goto(1, y as u16),
+                    termion::clear::CurrentLine
+                )?;
+            }
+
+            if Some(line) != self.prev_buffer.get(y) {
                 write!(self.terminal, "{}", termion::cursor::Goto(1, y as u16))?;
                 let mut x = 0;
                 while x < line.len() {
                     write!(self.terminal, "{}", line[x].content)?;
                     x += line[x].content.width().unwrap_or(0);
                 }
-                self.prev_buffer[y] = line.clone();
+                if let Some(mut old_line) = self.prev_buffer.get_mut(y) {
+                    *old_line = line.clone();
+                };
             }
         }
 
@@ -87,7 +95,7 @@ impl TermBuf {
 
     /// Call this when the terminal changes size, the internal buffer will be resized
     pub fn update_size(&mut self) -> Result<(), Error> {
-        let new_size = Self::size()?;
+        let new_size = self.size()?;
 
         self.buffer = vec![vec![TermCell { content: ' ' }; new_size.width]; new_size.height];
         self.prev_buffer = vec![vec![TermCell { content: ' ' }; new_size.width]; new_size.height];
@@ -110,7 +118,7 @@ impl TermBuf {
     }
 
     /// Gets size of the terminal
-    pub fn size() -> Result<TermSize, Error> {
+    pub fn size(&self) -> Result<TermSize, Error> {
         let rawsize = termion::terminal_size()?;
         Ok(TermSize {
             width: rawsize.0 as usize,
@@ -139,9 +147,10 @@ impl TermBuf {
     }
 
     /// Empties buffer
-    pub fn clear(&mut self) {
-        let size = self.size;
+    pub fn clear(&mut self) -> Result<(), Error> {
+        let size = self.size()?;
         self.buffer =
             vec![vec![TermCell { content: ' ' }; size.width as usize]; size.height as usize];
+        Ok(())
     }
 }
