@@ -4,5 +4,8 @@ version = "0.1.0"
 authors = ["Noskcaj <kcajdev@gmail.com>"]
 
 [dependencies]
-termion = "1.5.1"
+# termion = "1.5.1"
 unicode-width = "0.1.4"
+
+[dependencies.termion]
+git = "https://github.com/Noskcaj19/termion.git"

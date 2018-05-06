@@ -5,6 +5,8 @@ use unicode_width::UnicodeWidthChar;
 
 use std::io::{stdout, Error, Stdout, Write};
 
+pub use termion::color;
+use termion::color::{Bg, Color, Fg};
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
 
@@ -14,9 +16,93 @@ pub struct TermSize {
     pub height: usize,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct TermCell {
     content: char,
+    fg: Option<&'static Color>,
+    bg: Option<&'static Color>,
+}
+
+impl TermCell {
+    pub fn empty() -> TermCell {
+        TermCell {
+            content: ' ',
+            fg: None,
+            bg: None,
+        }
+    }
+
+    pub fn with_char(ch: char) -> TermCell {
+        TermCell {
+            content: ch,
+            fg: None,
+            bg: None,
+        }
+    }
+}
+
+impl PartialEq for TermCell {
+    fn eq(&self, other: &TermCell) -> bool {
+        self.content == other.content
+    }
+}
+
+pub struct ColorCellBuilder<'a> {
+    buf: &'a mut Vec<Vec<TermCell>>,
+    content: String,
+    x: usize,
+    y: usize,
+    fg: Option<&'static Color>,
+    bg: Option<&'static Color>,
+}
+
+impl<'a> ColorCellBuilder<'a> {
+    pub fn new(
+        buf: &'a mut Vec<Vec<TermCell>>,
+        content: String,
+        x: usize,
+        y: usize,
+    ) -> ColorCellBuilder<'a> {
+        ColorCellBuilder {
+            buf,
+            content,
+            x,
+            y,
+            fg: None,
+            bg: None,
+        }
+    }
+
+    pub fn fg(self, color: &'static Color) -> ColorCellBuilder<'a> {
+        ColorCellBuilder {
+            fg: Some(color),
+            ..self
+        }
+    }
+
+    pub fn bg(self, color: &'static Color) -> ColorCellBuilder<'a> {
+        ColorCellBuilder {
+            bg: Some(color),
+            ..self
+        }
+    }
+
+    pub fn build(self) {
+        let mut x = self.x;
+        for ch in self.content.chars() {
+            let new_cell = TermCell {
+                content: ch,
+                fg: self.fg,
+                bg: self.bg,
+            };
+            if let Some(line) = self.buf.get_mut(self.y) {
+                if let Some(mut old_ch) = line.get_mut(x) {
+                    *old_ch = new_cell;
+                }
+            }
+            x += 1;
+        }
+    }
 }
 
 pub struct TermBuf {
@@ -35,8 +121,8 @@ impl TermBuf {
             terminal: AlternateScreen::from(stdout().into_raw_mode()?),
             cursor: true,
             cursor_pos: (1, 1),
-            buffer: vec![vec![TermCell { content: ' ' }; size.0 as usize]; size.1 as usize],
-            prev_buffer: vec![vec![TermCell { content: ' ' }; size.0 as usize]; size.1 as usize],
+            buffer: vec![vec![TermCell::empty(); size.0 as usize]; size.1 as usize],
+            prev_buffer: vec![vec![TermCell::empty(); size.0 as usize]; size.1 as usize],
         })
     }
 
@@ -52,15 +138,25 @@ impl TermBuf {
     pub fn set_char(&mut self, ch: char, x: usize, y: usize) {
         if let Some(line) = self.buffer.get_mut(y) {
             if let Some(mut old_ch) = line.get_mut(x) {
-                *old_ch = TermCell { content: ch };
+                *old_ch = TermCell::with_char(ch);
             }
         }
+    }
+
+    /// Writes a single char with color builder
+    pub fn set_char_with(&mut self, ch: char, x: usize, y: usize) -> ColorCellBuilder {
+        ColorCellBuilder::new(&mut self.buffer, ch.to_string(), x, y)
+    }
+
+    /// Writes a string with color builder
+    pub fn put_string_with(&mut self, s: &str, x: usize, y: usize) -> ColorCellBuilder {
+        ColorCellBuilder::new(&mut self.buffer, s.to_owned(), x, y)
     }
 
     /// Draw internal buffer to the terminal
     pub fn draw(&mut self) -> Result<(), Error> {
         for (y, line) in self.buffer.iter().enumerate() {
-            if line.iter().all(|x| *x == TermCell { content: ' ' }) {
+            if line.iter().all(|x| *x == TermCell::empty()) {
                 write!(
                     self.terminal,
                     "{}{}",
@@ -73,7 +169,24 @@ impl TermBuf {
                 write!(self.terminal, "{}", termion::cursor::Goto(1, y as u16))?;
                 let mut x = 0;
                 while x < line.len() {
-                    write!(self.terminal, "{}", line[x].content)?;
+                    let cell = line[x];
+                    let mut fg = false;
+                    let mut bg = false;
+                    if cell.fg.is_some() {
+                        write!(self.terminal, "{}", Fg(cell.fg.unwrap()))?;
+                        fg = true;
+                    }
+                    if cell.bg.is_some() {
+                        write!(self.terminal, "{}", Bg(cell.bg.unwrap()))?;
+                        bg = true;
+                    }
+                    write!(self.terminal, "{}", cell.content)?;
+                    if fg {
+                        write!(self.terminal, "{}", Fg(termion::color::Reset))?;
+                    }
+                    if bg {
+                        write!(self.terminal, "{}", Bg(termion::color::Reset))?;
+                    }
                     x += line[x].content.width().unwrap_or(0);
                 }
                 if let Some(mut old_line) = self.prev_buffer.get_mut(y) {
@@ -97,8 +210,8 @@ impl TermBuf {
     pub fn update_size(&mut self) -> Result<(), Error> {
         let new_size = self.size()?;
 
-        self.buffer = vec![vec![TermCell { content: ' ' }; new_size.width]; new_size.height];
-        self.prev_buffer = vec![vec![TermCell { content: ' ' }; new_size.width]; new_size.height];
+        self.buffer = vec![vec![TermCell::empty(); new_size.width]; new_size.height];
+        self.prev_buffer = vec![vec![TermCell::empty(); new_size.width]; new_size.height];
         Ok(())
     }
 
@@ -149,8 +262,7 @@ impl TermBuf {
     /// Empties buffer
     pub fn clear(&mut self) -> Result<(), Error> {
         let size = self.size()?;
-        self.buffer =
-            vec![vec![TermCell { content: ' ' }; size.width as usize]; size.height as usize];
+        self.buffer = vec![vec![TermCell::empty(); size.width as usize]; size.height as usize];
         Ok(())
     }
 }
