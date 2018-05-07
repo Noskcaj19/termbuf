@@ -183,31 +183,31 @@ impl TermBuf {
                 let mut x = 0;
                 while x < line.len() {
                     let cell = &line[x];
-                    let mut fg = false;
-                    let mut bg = false;
-                    let mut styled = true;
-                    if cell.fg.is_some() {
-                        write!(self.terminal, "{}", Fg(cell.fg.unwrap()))?;
-                        fg = true;
+                    let mut has_fg = false;
+                    let mut has_bg = false;
+                    let mut has_style = false;
+                    if let Some(fg) = cell.fg {
+                        write!(self.terminal, "{}", Fg(fg))?;
+                        has_fg = true;
                     }
-                    if cell.bg.is_some() {
-                        write!(self.terminal, "{}", Bg(cell.bg.unwrap()))?;
-                        bg = true;
+                    if let Some(bg) = cell.bg {
+                        write!(self.terminal, "{}", Bg(bg))?;
+                        has_bg = true;
                     }
                     if let Some(style) = &cell.style {
                         for style in style {
                             write!(self.terminal, "{}", style)?;
                         }
-                        styled = true;
+                        has_style = true;
                     }
                     write!(self.terminal, "{}", cell.content)?;
-                    if fg {
+                    if has_fg {
                         write!(self.terminal, "{}", Fg(termion::color::Reset))?;
                     }
-                    if bg {
+                    if has_bg {
                         write!(self.terminal, "{}", Bg(termion::color::Reset))?;
                     }
-                    if styled {
+                    if has_style {
                         write!(self.terminal, "{}", termion::style::Reset)?;
                     }
                     x += line[x].content.width().unwrap_or(0);
