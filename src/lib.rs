@@ -5,10 +5,12 @@ use unicode_width::UnicodeWidthChar;
 
 use std::io::{stdout, Error, Stdout, Write};
 
-pub use termion::color;
-use termion::color::{Bg, Color, Fg};
+use termion::color::{Bg, Fg};
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
+
+mod color;
+pub use color::Color;
 
 #[derive(Debug, Copy, Clone)]
 pub struct TermSize {
@@ -16,11 +18,11 @@ pub struct TermSize {
     pub height: usize,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TermCell {
     content: char,
-    fg: Option<&'static Color>,
-    bg: Option<&'static Color>,
+    fg: Option<Color>,
+    bg: Option<Color>,
 }
 
 impl TermCell {
@@ -41,19 +43,13 @@ impl TermCell {
     }
 }
 
-impl PartialEq for TermCell {
-    fn eq(&self, other: &TermCell) -> bool {
-        self.content == other.content
-    }
-}
-
 pub struct ColorCellBuilder<'a> {
     buf: &'a mut Vec<Vec<TermCell>>,
     content: String,
     x: usize,
     y: usize,
-    fg: Option<&'static Color>,
-    bg: Option<&'static Color>,
+    fg: Option<Color>,
+    bg: Option<Color>,
 }
 
 impl<'a> ColorCellBuilder<'a> {
@@ -73,14 +69,14 @@ impl<'a> ColorCellBuilder<'a> {
         }
     }
 
-    pub fn fg(self, color: &'static Color) -> ColorCellBuilder<'a> {
+    pub fn fg(self, color: Color) -> ColorCellBuilder<'a> {
         ColorCellBuilder {
             fg: Some(color),
             ..self
         }
     }
 
-    pub fn bg(self, color: &'static Color) -> ColorCellBuilder<'a> {
+    pub fn bg(self, color: Color) -> ColorCellBuilder<'a> {
         ColorCellBuilder {
             bg: Some(color),
             ..self
