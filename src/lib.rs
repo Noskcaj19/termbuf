@@ -10,7 +10,9 @@ use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
 
 mod color;
+mod style;
 pub use color::Color;
+pub use style::Style;
 
 #[derive(Debug, Copy, Clone)]
 pub struct TermSize {
@@ -18,11 +20,12 @@ pub struct TermSize {
     pub height: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TermCell {
     content: char,
     fg: Option<Color>,
     bg: Option<Color>,
+    style: Option<Vec<Style>>,
 }
 
 impl TermCell {
@@ -31,6 +34,7 @@ impl TermCell {
             content: ' ',
             fg: None,
             bg: None,
+            style: None,
         }
     }
 
@@ -39,46 +43,58 @@ impl TermCell {
             content: ch,
             fg: None,
             bg: None,
+            style: None,
         }
     }
 }
 
-pub struct ColorCellBuilder<'a> {
+pub struct CellBuilder<'a> {
     buf: &'a mut Vec<Vec<TermCell>>,
     content: String,
     x: usize,
     y: usize,
     fg: Option<Color>,
     bg: Option<Color>,
+    style: Option<Vec<Style>>,
 }
 
-impl<'a> ColorCellBuilder<'a> {
+impl<'a> CellBuilder<'a> {
     pub fn new(
         buf: &'a mut Vec<Vec<TermCell>>,
         content: String,
         x: usize,
         y: usize,
-    ) -> ColorCellBuilder<'a> {
-        ColorCellBuilder {
+    ) -> CellBuilder<'a> {
+        CellBuilder {
             buf,
             content,
             x,
             y,
             fg: None,
             bg: None,
+            style: None,
         }
     }
 
-    pub fn fg(self, color: Color) -> ColorCellBuilder<'a> {
-        ColorCellBuilder {
+    pub fn fg(self, color: Color) -> CellBuilder<'a> {
+        CellBuilder {
             fg: Some(color),
             ..self
         }
     }
 
-    pub fn bg(self, color: Color) -> ColorCellBuilder<'a> {
-        ColorCellBuilder {
+    pub fn bg(self, color: Color) -> CellBuilder<'a> {
+        CellBuilder {
             bg: Some(color),
+            ..self
+        }
+    }
+
+    pub fn style(self, style: Style) -> CellBuilder<'a> {
+        let mut styles = self.style.unwrap_or_default();
+        styles.push(style);
+        CellBuilder {
+            style: Some(styles),
             ..self
         }
     }
@@ -90,6 +106,7 @@ impl<'a> ColorCellBuilder<'a> {
                 content: ch,
                 fg: self.fg,
                 bg: self.bg,
+                style: self.style.clone(),
             };
             if let Some(line) = self.buf.get_mut(self.y) {
                 if let Some(mut old_ch) = line.get_mut(x) {
@@ -140,13 +157,13 @@ impl TermBuf {
     }
 
     /// Writes a single char with color builder
-    pub fn set_char_with(&mut self, ch: char, x: usize, y: usize) -> ColorCellBuilder {
-        ColorCellBuilder::new(&mut self.buffer, ch.to_string(), x, y)
+    pub fn set_char_with(&mut self, ch: char, x: usize, y: usize) -> CellBuilder {
+        CellBuilder::new(&mut self.buffer, ch.to_string(), x, y)
     }
 
     /// Writes a string with color builder
-    pub fn put_string_with(&mut self, s: &str, x: usize, y: usize) -> ColorCellBuilder {
-        ColorCellBuilder::new(&mut self.buffer, s.to_owned(), x, y)
+    pub fn put_string_with(&mut self, s: &str, x: usize, y: usize) -> CellBuilder {
+        CellBuilder::new(&mut self.buffer, s.to_owned(), x, y)
     }
 
     /// Draw internal buffer to the terminal
@@ -165,9 +182,10 @@ impl TermBuf {
                 write!(self.terminal, "{}", termion::cursor::Goto(1, y as u16))?;
                 let mut x = 0;
                 while x < line.len() {
-                    let cell = line[x];
+                    let cell = &line[x];
                     let mut fg = false;
                     let mut bg = false;
+                    let mut styled = true;
                     if cell.fg.is_some() {
                         write!(self.terminal, "{}", Fg(cell.fg.unwrap()))?;
                         fg = true;
@@ -176,12 +194,21 @@ impl TermBuf {
                         write!(self.terminal, "{}", Bg(cell.bg.unwrap()))?;
                         bg = true;
                     }
+                    if let Some(style) = &cell.style {
+                        for style in style {
+                            write!(self.terminal, "{}", style)?;
+                        }
+                        styled = true;
+                    }
                     write!(self.terminal, "{}", cell.content)?;
                     if fg {
                         write!(self.terminal, "{}", Fg(termion::color::Reset))?;
                     }
                     if bg {
                         write!(self.terminal, "{}", Bg(termion::color::Reset))?;
+                    }
+                    if styled {
+                        write!(self.terminal, "{}", termion::style::Reset)?;
                     }
                     x += line[x].content.width().unwrap_or(0);
                 }

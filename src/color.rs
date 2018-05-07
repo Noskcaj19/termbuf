@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use termion::color;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
