@@ -286,6 +286,20 @@ impl TermBuf {
         }
     }
 
+    /// Draw a vertical line
+    pub fn draw_vertical_line(&mut self, x: usize, y: usize, len: usize) {
+        for i in y..len + y {
+            self.set_char('│', x, i);
+        }
+    }
+
+    /// Draw a horizontal line
+    pub fn draw_horiztonal_line(&mut self, x: usize, y: usize, len: usize) {
+        for i in x..(len + x) {
+            self.set_char('─', i, y);
+        }
+    }
+
     /// Empties buffer
     pub fn clear(&mut self) -> Result<(), Error> {
         let size = self.size()?;
