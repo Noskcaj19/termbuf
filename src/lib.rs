@@ -150,15 +150,8 @@ impl TermBuf {
     /// Writes a single char
     pub fn set_char(&mut self, ch: char, x: usize, y: usize) {
         if let Some(line) = self.buffer.get_mut(y) {
-            let width = ch.width().unwrap_or(0);
             if let Some(mut old_ch) = line.get_mut(x) {
                 *old_ch = TermCell::with_char(ch);
-            }
-
-            for i in 1..width {
-                if let Some(mut old_ch) = line.get_mut(x + i) {
-                    *old_ch = TermCell::empty();
-                }
             }
         }
     }
@@ -187,7 +180,9 @@ impl TermBuf {
 
             if Some(line) != self.prev_buffer.get(y) {
                 write!(self.terminal, "{}", termion::cursor::Goto(1, y as u16))?;
-                for cell in line {
+                let mut x = 0;
+                while x < line.len() {
+                    let cell = &line[x];
                     let mut has_fg = false;
                     let mut has_bg = false;
                     let mut has_style = false;
@@ -215,6 +210,7 @@ impl TermBuf {
                     if has_style {
                         write!(self.terminal, "{}", termion::style::Reset)?;
                     }
+                    x += line[x].content.width().unwrap_or(0);
                 }
                 if let Some(mut old_line) = self.prev_buffer.get_mut(y) {
                     *old_line = line.clone();
