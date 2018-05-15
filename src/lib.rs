@@ -99,6 +99,15 @@ impl<'a> CellBuilder<'a> {
         }
     }
 
+    pub fn styles(self, styles: &[Style]) -> CellBuilder<'a> {
+        let mut old_styles = self.style.unwrap_or_default();
+        old_styles.extend_from_slice(styles);
+        CellBuilder {
+            style: Some(old_styles),
+            ..self
+        }
+    }
+
     pub fn build(self) {
         let mut x = self.x;
         for ch in self.content.chars() {
