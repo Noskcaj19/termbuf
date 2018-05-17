@@ -26,6 +26,7 @@ pub struct TermCell {
     fg: Option<Color>,
     bg: Option<Color>,
     style: Option<Vec<Style>>,
+    width: u8,
 }
 
 impl TermCell {
@@ -35,6 +36,7 @@ impl TermCell {
             fg: None,
             bg: None,
             style: None,
+            width: 1,
         }
     }
 
@@ -44,6 +46,7 @@ impl TermCell {
             fg: None,
             bg: None,
             style: None,
+            width: ch.width().unwrap_or(1) as u8,
         }
     }
 }
@@ -111,18 +114,20 @@ impl<'a> CellBuilder<'a> {
     pub fn build(self) {
         let mut x = self.x;
         for ch in self.content.chars() {
+            let width = ch.width().unwrap_or(1);
             let new_cell = TermCell {
                 content: ch,
                 fg: self.fg,
                 bg: self.bg,
                 style: self.style.clone(),
+                width: width as u8,
             };
             if let Some(line) = self.buf.get_mut(self.y) {
                 if let Some(mut old_ch) = line.get_mut(x) {
                     *old_ch = new_cell;
                 }
             }
-            x += 1;
+            x += width;
         }
     }
 }
@@ -219,12 +224,8 @@ impl TermBuf {
                     if has_style {
                         write!(self.terminal, "{}", termion::style::Reset)?;
                     }
-                    let width = line[x].content.width().unwrap_or(1);
-                    if width == 0 {
-                        x += 1
-                    } else {
-                        x += width;
-                    };
+                    let width = line[x].width;
+                    x += if width == 0 { 1 } else { width as usize };
                 }
                 if let Some(mut old_line) = self.prev_buffer.get_mut(y) {
                     *old_line = line.clone();
