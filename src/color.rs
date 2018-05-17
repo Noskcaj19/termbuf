@@ -1,5 +1,8 @@
 use termion::color;
 
+/// Represents a forground or background color for a cell
+///
+/// See the [termion docs](::termion::color) for details
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
     AnsiValue(u8),

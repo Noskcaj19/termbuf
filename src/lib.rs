@@ -14,22 +14,32 @@ mod style;
 pub use color::Color;
 pub use style::Style;
 
+/// Represents the size of the terminal
 #[derive(Debug, Copy, Clone)]
 pub struct TermSize {
+    /// Width in cells
     pub width: usize,
+    /// Height in cells
     pub height: usize,
 }
 
+/// A single cell in the terminal
 #[derive(Debug, Clone, PartialEq)]
 pub struct TermCell {
-    content: char,
-    fg: Option<Color>,
-    bg: Option<Color>,
-    style: Option<Vec<Style>>,
-    width: u8,
+    /// Character content of the cell
+    pub content: char,
+    /// The forground color of the cell, if any
+    pub fg: Option<Color>,
+    /// The background color of the cell, if any
+    pub bg: Option<Color>,
+    /// All the styles of the cell, if any
+    pub style: Option<Vec<Style>>,
+    /// The width of the character
+    pub width: u8,
 }
 
 impl TermCell {
+    /// Create a new empty cell
     pub fn empty() -> TermCell {
         TermCell {
             content: ' ',
@@ -40,6 +50,7 @@ impl TermCell {
         }
     }
 
+    /// Create an unstyled cell with a give char
     pub fn with_char(ch: char) -> TermCell {
         TermCell {
             content: ch,
@@ -51,6 +62,9 @@ impl TermCell {
     }
 }
 
+/// A builder to construct styled cells, not to be created directly
+///
+/// Create a `CellBuilder` using `set_char_with` and `put_string_with`
 pub struct CellBuilder<'a> {
     buf: &'a mut Vec<Vec<TermCell>>,
     content: String,
@@ -62,7 +76,9 @@ pub struct CellBuilder<'a> {
 }
 
 impl<'a> CellBuilder<'a> {
-    pub fn new(
+    /// Create a new new `CellBuilder`
+    /// To be used by `set_char_with` and `put_string_with`
+    fn new(
         buf: &'a mut Vec<Vec<TermCell>>,
         content: String,
         x: usize,
@@ -79,6 +95,7 @@ impl<'a> CellBuilder<'a> {
         }
     }
 
+    /// Set the forground color
     pub fn fg(self, color: Color) -> CellBuilder<'a> {
         CellBuilder {
             fg: Some(color),
@@ -86,6 +103,7 @@ impl<'a> CellBuilder<'a> {
         }
     }
 
+    /// Set to background color
     pub fn bg(self, color: Color) -> CellBuilder<'a> {
         CellBuilder {
             bg: Some(color),
@@ -93,6 +111,7 @@ impl<'a> CellBuilder<'a> {
         }
     }
 
+    /// Add a style
     pub fn style(self, style: Style) -> CellBuilder<'a> {
         let mut styles = self.style.unwrap_or_default();
         styles.push(style);
@@ -102,6 +121,7 @@ impl<'a> CellBuilder<'a> {
         }
     }
 
+    /// Add multiple styles
     pub fn styles(self, styles: &[Style]) -> CellBuilder<'a> {
         let mut old_styles = self.style.unwrap_or_default();
         old_styles.extend_from_slice(styles);
@@ -111,6 +131,7 @@ impl<'a> CellBuilder<'a> {
         }
     }
 
+    /// Write all the new content to the terminal buffer
     pub fn build(self) {
         let mut x = self.x;
         for ch in self.content.chars() {
@@ -132,11 +153,17 @@ impl<'a> CellBuilder<'a> {
     }
 }
 
+/// A buffered terminal interface, using a cell-based api
 pub struct TermBuf {
+    /// The underlying, unbuffered, `RawTerminal`
     pub terminal: AlternateScreen<RawTerminal<Stdout>>,
+    /// Whether or not the cursor will be shown
     pub cursor: bool,
+    /// The position of the cursor, 1 indexed
     pub cursor_pos: (usize, usize),
+    /// The internal cell buffer
     buffer: Vec<Vec<TermCell>>,
+    /// The state of the buffer before the last write
     prev_buffer: Vec<Vec<TermCell>>,
 }
 
@@ -166,6 +193,15 @@ impl TermBuf {
         if let Some(line) = self.buffer.get_mut(y) {
             if let Some(mut old_ch) = line.get_mut(x) {
                 *old_ch = TermCell::with_char(ch);
+            }
+        }
+    }
+
+    /// Writes a single cell
+    pub fn set_cell(&mut self, cell: TermCell, x: usize, y: usize) {
+        if let Some(line) = self.buffer.get_mut(y) {
+            if let Some(mut old_ch) = line.get_mut(x) {
+                *old_ch = cell;
             }
         }
     }

@@ -1,6 +1,9 @@
 use std::fmt;
 use termion::style;
 
+/// Represents a single cell style, not all terminals support all of these styles
+///
+/// See the [termion docs](::termion::style) for details
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Style {
     Blink,
