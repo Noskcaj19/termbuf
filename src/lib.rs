@@ -219,7 +219,12 @@ impl TermBuf {
                     if has_style {
                         write!(self.terminal, "{}", termion::style::Reset)?;
                     }
-                    x += line[x].content.width().unwrap_or(0);
+                    let width = line[x].content.width().unwrap_or(1);
+                    if width == 0 {
+                        x += 1
+                    } else {
+                        x += width;
+                    };
                 }
                 if let Some(mut old_line) = self.prev_buffer.get_mut(y) {
                     *old_line = line.clone();
