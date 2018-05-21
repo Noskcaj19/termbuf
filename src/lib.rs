@@ -1,3 +1,5 @@
+#![warn(clippy)]
+
 pub extern crate termion;
 extern crate unicode_width;
 
@@ -9,10 +11,23 @@ use termion::color::{Bg, Fg};
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::screen::AlternateScreen;
 
+pub mod builder;
 mod color;
 mod style;
 pub use color::Color;
 pub use style::Style;
+
+use builder::*;
+
+/// Returns the width of a char if it is greater than zero, or one if it is zero
+pub fn safe_width(ch: char) -> usize {
+    let width = ch.width().unwrap_or(1);
+    if width == 0 {
+        1
+    } else {
+        width
+    }
+}
 
 /// Represents the size of the terminal
 #[derive(Debug, Copy, Clone)]
@@ -24,6 +39,8 @@ pub struct TermSize {
 }
 
 /// A single cell in the terminal
+///
+/// To create styled cells, see [`builder::CellBuilder`]
 #[derive(Debug, Clone, PartialEq)]
 pub struct TermCell {
     /// Character content of the cell
@@ -35,11 +52,11 @@ pub struct TermCell {
     /// All the styles of the cell, if any
     pub style: Option<Vec<Style>>,
     /// The width of the character
-    pub width: u8,
+    pub(crate) width: u8,
 }
 
 impl TermCell {
-    /// Create a new empty cell
+    /// Creates a new empty cell
     pub fn empty() -> TermCell {
         TermCell {
             content: ' ',
@@ -50,7 +67,7 @@ impl TermCell {
         }
     }
 
-    /// Create an unstyled cell with a give char
+    /// Creates an unstyled cell with a give char
     pub fn with_char(ch: char) -> TermCell {
         TermCell {
             content: ch,
@@ -58,97 +75,6 @@ impl TermCell {
             bg: None,
             style: None,
             width: ch.width().unwrap_or(1) as u8,
-        }
-    }
-}
-
-/// A builder to construct styled cells, not to be created directly
-///
-/// Create a `CellBuilder` using `set_char_with` and `put_string_with`
-pub struct CellBuilder<'a> {
-    buf: &'a mut Vec<Vec<TermCell>>,
-    content: String,
-    x: usize,
-    y: usize,
-    fg: Option<Color>,
-    bg: Option<Color>,
-    style: Option<Vec<Style>>,
-}
-
-impl<'a> CellBuilder<'a> {
-    /// Create a new new `CellBuilder`
-    /// To be used by `set_char_with` and `put_string_with`
-    fn new(
-        buf: &'a mut Vec<Vec<TermCell>>,
-        content: String,
-        x: usize,
-        y: usize,
-    ) -> CellBuilder<'a> {
-        CellBuilder {
-            buf,
-            content,
-            x,
-            y,
-            fg: None,
-            bg: None,
-            style: None,
-        }
-    }
-
-    /// Set the forground color
-    pub fn fg(self, color: Color) -> CellBuilder<'a> {
-        CellBuilder {
-            fg: Some(color),
-            ..self
-        }
-    }
-
-    /// Set to background color
-    pub fn bg(self, color: Color) -> CellBuilder<'a> {
-        CellBuilder {
-            bg: Some(color),
-            ..self
-        }
-    }
-
-    /// Add a style
-    pub fn style(self, style: Style) -> CellBuilder<'a> {
-        let mut styles = self.style.unwrap_or_default();
-        styles.push(style);
-        CellBuilder {
-            style: Some(styles),
-            ..self
-        }
-    }
-
-    /// Add multiple styles
-    pub fn styles(self, styles: &[Style]) -> CellBuilder<'a> {
-        let mut old_styles = self.style.unwrap_or_default();
-        old_styles.extend_from_slice(styles);
-        CellBuilder {
-            style: Some(old_styles),
-            ..self
-        }
-    }
-
-    /// Write all the new content to the terminal buffer
-    pub fn build(self) {
-        let mut x = self.x;
-        for ch in self.content.chars() {
-            let width = ch.width().unwrap_or(1);
-            let new_cell = TermCell {
-                content: ch,
-                fg: self.fg,
-                bg: self.bg,
-                style: self.style.clone(),
-                width: width as u8,
-            };
-            if let Some(line) = self.buf.get_mut(self.y) {
-                if let Some(mut old_ch) = line.get_mut(x) {
-                    *old_ch = new_cell;
-                }
-            }
-            x += width;
         }
     }
 }
@@ -207,16 +133,16 @@ impl TermBuf {
     }
 
     /// Writes a single char with color builder
-    pub fn set_char_with(&mut self, ch: char, x: usize, y: usize) -> CellBuilder {
-        CellBuilder::new(&mut self.buffer, ch.to_string(), x, y)
+    pub fn char_builder(&mut self, ch: char, x: usize, y: usize) -> StyleCellBuilder {
+        StyleCellBuilder::new(&mut self.buffer, ch.to_string(), x, y)
     }
 
     /// Writes a string with color builder
-    pub fn put_string_with(&mut self, s: &str, x: usize, y: usize) -> CellBuilder {
-        CellBuilder::new(&mut self.buffer, s.to_owned(), x, y)
+    pub fn string_builder(&mut self, s: &str, x: usize, y: usize) -> StyleCellBuilder {
+        StyleCellBuilder::new(&mut self.buffer, s.to_owned(), x, y)
     }
 
-    /// Draw internal buffer to the terminal
+    /// Draws the internal buffer to the terminal
     pub fn draw(&mut self) -> Result<(), Error> {
         for (y, line) in self.buffer.iter().enumerate() {
             if line.iter().all(|x| *x == TermCell::empty()) {
@@ -260,8 +186,7 @@ impl TermBuf {
                     if has_style {
                         write!(self.terminal, "{}", termion::style::Reset)?;
                     }
-                    let width = line[x].width;
-                    x += if width == 0 { 1 } else { width as usize };
+                    x += safe_width(line[x].content);
                 }
                 if let Some(mut old_line) = self.prev_buffer.get_mut(y) {
                     *old_line = line.clone();
@@ -280,6 +205,8 @@ impl TermBuf {
         Ok(())
     }
 
+    /// Resizes the internal buffers if the terminal has changed size
+    ///
     /// Call this when the terminal changes size, the internal buffer will be resized
     pub fn update_size(&mut self) -> Result<(), Error> {
         let new_size = self.size()?;
@@ -313,7 +240,7 @@ impl TermBuf {
         })
     }
 
-    /// Draws a unicode box
+    /// Draws a simple (unstyled) unicode box
     pub fn draw_box(&mut self, x: usize, y: usize, width: usize, height: usize) {
         let width = width + 1;
         let height = height + 1;
@@ -333,18 +260,28 @@ impl TermBuf {
         }
     }
 
-    /// Draw a vertical line
+    // /// Creates a builder to draw a styled box
+    // pub fn box_builder(&mut self, x: usize, y: usize, width: usize, height: usize) -> BoxBuilder {
+    //     BoxBuilder::new(&mut self.buffer, x, y, width, height)
+    // }
+
+    /// Draws a simple (unstyled) vertical line
     pub fn draw_vertical_line(&mut self, x: usize, y: usize, len: usize) {
         for i in y..len + y {
             self.set_char('│', x, i);
         }
     }
 
-    /// Draw a horizontal line
+    /// Draws a simple (unstyled) horizontal line
     pub fn draw_horiztonal_line(&mut self, x: usize, y: usize, len: usize) {
         for i in x..(len + x) {
             self.set_char('─', i, y);
         }
+    }
+
+    /// Creates a builder to draw a styled line
+    pub fn line_builder(&mut self, x: usize, y: usize, len: usize) -> LineBuilder {
+        LineBuilder::new(&mut self.buffer, x, y, len)
     }
 
     /// Empties buffer
