@@ -145,6 +145,8 @@ impl TermBuf {
     /// Draws the internal buffer to the terminal
     pub fn draw(&mut self) -> Result<(), Error> {
         for (y, line) in self.buffer.iter().enumerate() {
+            let y = y + 1;
+            // If the buffer line is empty, make sure the line is empty in the terminal
             if line.iter().all(|x| *x == TermCell::empty()) {
                 write!(
                     self.terminal,
