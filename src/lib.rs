@@ -132,6 +132,33 @@ impl TermBuf {
         }
     }
 
+    /// Replaces the forground of a cell
+    pub fn set_cell_fg(&mut self, fg: Color, x: usize, y: usize) {
+        if let Some(line) = self.buffer.get_mut(y) {
+            if let Some(mut old_cell) = line.get_mut(x) {
+                old_cell.fg = Some(fg);
+            }
+        }
+    }
+
+    /// Replaces the background of a cell
+    pub fn set_cell_bg(&mut self, bg: Color, x: usize, y: usize) {
+        if let Some(line) = self.buffer.get_mut(y) {
+            if let Some(mut old_cell) = line.get_mut(x) {
+                old_cell.bg = Some(bg);
+            }
+        }
+    }
+
+    /// Replaces the style of a cell
+    pub fn set_cell_style(&mut self, style: Style, x: usize, y: usize) {
+        if let Some(line) = self.buffer.get_mut(y) {
+            if let Some(mut old_cell) = line.get_mut(x) {
+                old_cell.style = Some(vec![style]);
+            }
+        }
+    }
+
     /// Writes a single char with color builder
     pub fn char_builder(&mut self, ch: char, x: usize, y: usize) -> StyleCellBuilder {
         StyleCellBuilder::new(&mut self.buffer, ch.to_string(), x, y)
