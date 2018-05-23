@@ -320,3 +320,11 @@ impl TermBuf {
         Ok(())
     }
 }
+
+impl Drop for TermBuf {
+    fn drop(&mut self) {
+        if !self.cursor {
+            let _ = self.set_cursor_visible(true);
+        }
+    }
+}
