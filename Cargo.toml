@@ -6,3 +6,4 @@ authors = ["Noskcaj <kcajdev@gmail.com>"]
 [dependencies]
 termion = "1.5.1"
 unicode-width = "0.1.4"
+bitflags = "1.0.3"

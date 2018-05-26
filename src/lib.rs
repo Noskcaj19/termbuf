@@ -1,6 +1,6 @@
-#![warn(clippy)]
-
 pub extern crate termion;
+#[macro_use]
+extern crate bitflags;
 extern crate unicode_width;
 
 use unicode_width::UnicodeWidthChar;
@@ -50,7 +50,7 @@ pub struct TermCell {
     /// The background color of the cell, if any
     pub bg: Option<Color>,
     /// All the styles of the cell, if any
-    pub style: Option<Vec<Style>>,
+    pub style: Option<Style>,
     /// The width of the character
     pub(crate) width: u8,
 }
@@ -154,7 +154,7 @@ impl TermBuf {
     pub fn set_cell_style(&mut self, style: Style, x: usize, y: usize) {
         if let Some(line) = self.buffer.get_mut(y) {
             if let Some(mut old_cell) = line.get_mut(x) {
-                old_cell.style = Some(vec![style]);
+                old_cell.style = Some(style);
             }
         }
     }
@@ -200,9 +200,7 @@ impl TermBuf {
                         has_bg = true;
                     }
                     if let Some(style) = &cell.style {
-                        for style in style {
-                            write!(self.terminal, "{}", style)?;
-                        }
+                        write!(self.terminal, "{}", style)?;
                         has_style = true;
                     }
                     write!(self.terminal, "{}", cell.content)?;

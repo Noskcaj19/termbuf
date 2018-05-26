@@ -13,7 +13,7 @@ pub struct CellBuilder {
     content: char,
     fg: Option<Color>,
     bg: Option<Color>,
-    style: Option<Vec<Style>>,
+    style: Option<Style>,
 }
 
 impl CellBuilder {
@@ -56,25 +56,23 @@ impl CellBuilder {
     /// Adds a style
     pub fn style(self, style: Style) -> CellBuilder {
         let mut styles = self.style.unwrap_or_default();
-        styles.push(style);
         CellBuilder {
-            style: Some(styles),
+            style: Some(styles | style),
             ..self
         }
     }
 
     /// Adds multiple styles
-    pub fn styles(self, styles: &[Style]) -> CellBuilder {
+    pub fn styles(self, styles: Style) -> CellBuilder {
         let mut old_styles = self.style.unwrap_or_default();
-        old_styles.extend_from_slice(styles);
         CellBuilder {
-            style: Some(old_styles),
+            style: Some(old_styles | styles),
             ..self
         }
     }
 
     /// Sets all styles
-    pub fn maybe_styles(self, styles: Option<Vec<Style>>) -> CellBuilder {
+    pub fn maybe_styles(self, styles: Option<Style>) -> CellBuilder {
         CellBuilder {
             style: styles,
             ..self
@@ -108,7 +106,7 @@ pub struct StyleCellBuilder<'a> {
     y: usize,
     fg: Option<Color>,
     bg: Option<Color>,
-    style: Option<Vec<Style>>,
+    style: Option<Style>,
 }
 
 impl<'a> StyleCellBuilder<'a> {
@@ -150,19 +148,17 @@ impl<'a> StyleCellBuilder<'a> {
     /// Adds a style
     pub fn style(self, style: Style) -> StyleCellBuilder<'a> {
         let mut styles = self.style.unwrap_or_default();
-        styles.push(style);
         StyleCellBuilder {
-            style: Some(styles),
+            style: Some(styles | style),
             ..self
         }
     }
 
     /// Adds multiple styles
-    pub fn styles(self, styles: &[Style]) -> StyleCellBuilder<'a> {
+    pub fn styles(self, styles: Style) -> StyleCellBuilder<'a> {
         let mut old_styles = self.style.unwrap_or_default();
-        old_styles.extend_from_slice(styles);
         StyleCellBuilder {
-            style: Some(old_styles),
+            style: Some(old_styles | styles),
             ..self
         }
     }
@@ -205,7 +201,7 @@ pub struct LineBuilder<'a> {
     orientation: Option<LineOrientation>,
     fg: Option<Color>,
     bg: Option<Color>,
-    style: Option<Vec<Style>>,
+    style: Option<Style>,
 }
 
 impl<'a> LineBuilder<'a> {
@@ -279,19 +275,17 @@ impl<'a> LineBuilder<'a> {
     /// Adds a style
     pub fn style(self, style: Style) -> LineBuilder<'a> {
         let mut styles = self.style.unwrap_or_default();
-        styles.push(style);
         LineBuilder {
-            style: Some(styles),
+            style: Some(styles | style),
             ..self
         }
     }
 
     /// Adds multiple styles
-    pub fn styles(self, styles: &[Style]) -> LineBuilder<'a> {
+    pub fn styles(self, styles: Style) -> LineBuilder<'a> {
         let mut old_styles = self.style.unwrap_or_default();
-        old_styles.extend_from_slice(styles);
         LineBuilder {
-            style: Some(old_styles),
+            style: Some(old_styles | styles),
             ..self
         }
     }
