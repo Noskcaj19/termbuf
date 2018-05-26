@@ -28,64 +28,57 @@ impl CellBuilder {
     }
 
     /// Sets the forground color
-    pub fn fg(self, color: Color) -> CellBuilder {
-        CellBuilder {
-            fg: Some(color),
-            ..self
-        }
+    pub fn fg(&mut self, color: Color) -> &mut CellBuilder {
+        self.fg = Some(color);
+        self
     }
 
     /// Sets the background color
-    pub fn bg(self, color: Color) -> CellBuilder {
-        CellBuilder {
-            bg: Some(color),
-            ..self
-        }
+    pub fn bg(&mut self, color: Color) -> &mut CellBuilder {
+        self.bg = Some(color);
+        self
     }
 
     /// Optionally sets the forground color
-    pub fn maybe_fg(self, color: Option<Color>) -> CellBuilder {
-        CellBuilder { fg: color, ..self }
+    pub fn maybe_fg(&mut self, color: Option<Color>) -> &mut CellBuilder {
+        self.fg = color;
+        self
     }
 
     /// Optionally sets the background color
-    pub fn maybe_bg(self, color: Option<Color>) -> CellBuilder {
-        CellBuilder { bg: color, ..self }
+    pub fn maybe_bg(&mut self, color: Option<Color>) -> &mut CellBuilder {
+        self.bg = color;
+        self
     }
 
     /// Adds a style
-    pub fn style(self, style: Style) -> CellBuilder {
+    pub fn style(&mut self, style: Style) -> &mut CellBuilder {
         let styles = self.style.unwrap_or_default();
-        CellBuilder {
-            style: Some(styles | style),
-            ..self
-        }
+        self.style = Some(styles | style);
+        self
     }
 
     /// Adds multiple styles
-    pub fn styles(self, styles: Style) -> CellBuilder {
+    pub fn styles(&mut self, styles: Style) -> &mut CellBuilder {
         let old_styles = self.style.unwrap_or_default();
-        CellBuilder {
-            style: Some(old_styles | styles),
-            ..self
-        }
+        self.style = Some(old_styles | styles);
+        self
     }
 
     /// Sets all styles
-    pub fn maybe_styles(self, styles: Option<Style>) -> CellBuilder {
-        CellBuilder {
-            style: styles,
-            ..self
-        }
+    pub fn maybe_styles(&mut self, styles: Option<Style>) -> &mut CellBuilder {
+        self.style = styles;
+        self
     }
 
     /// Sets the character
-    pub fn char(self, content: char) -> CellBuilder {
-        CellBuilder { content, ..self }
+    pub fn char(&mut self, content: char) -> &mut CellBuilder {
+        self.content = content;
+        self
     }
 
     /// Returns the styled cell
-    pub fn build(self) -> TermCell {
+    pub fn build(&self) -> TermCell {
         TermCell {
             content: self.content,
             fg: self.fg,
@@ -130,41 +123,33 @@ impl<'a> StyleCellBuilder<'a> {
     }
 
     /// Sets the forground color
-    pub fn fg(self, color: Color) -> StyleCellBuilder<'a> {
-        StyleCellBuilder {
-            fg: Some(color),
-            ..self
-        }
+    pub fn fg(&mut self, color: Color) -> &mut StyleCellBuilder<'a> {
+        self.fg = Some(color);
+        self
     }
 
     /// Sets to background color
-    pub fn bg(self, color: Color) -> StyleCellBuilder<'a> {
-        StyleCellBuilder {
-            bg: Some(color),
-            ..self
-        }
+    pub fn bg(&mut self, color: Color) -> &mut StyleCellBuilder<'a> {
+        self.bg = Some(color);
+        self
     }
 
     /// Adds a style
-    pub fn style(self, style: Style) -> StyleCellBuilder<'a> {
+    pub fn style(&mut self, style: Style) -> &mut StyleCellBuilder<'a> {
         let styles = self.style.unwrap_or_default();
-        StyleCellBuilder {
-            style: Some(styles | style),
-            ..self
-        }
+        self.style = Some(styles | style);
+        self
     }
 
     /// Adds multiple styles
-    pub fn styles(self, styles: Style) -> StyleCellBuilder<'a> {
+    pub fn styles(&mut self, styles: Style) -> &mut StyleCellBuilder<'a> {
         let old_styles = self.style.unwrap_or_default();
-        StyleCellBuilder {
-            style: Some(old_styles | styles),
-            ..self
-        }
+        self.style = Some(old_styles | styles);
+        self
     }
 
     /// Writes all the new content to the terminal buffer
-    pub fn build(self) {
+    pub fn build(&mut self) {
         let mut x = self.x;
         for ch in self.content.chars() {
             let width = safe_width(ch);
@@ -226,90 +211,83 @@ impl<'a> LineBuilder<'a> {
     }
 
     /// Sets the x position
-    pub fn x(self, x: usize) -> LineBuilder<'a> {
-        LineBuilder { x, ..self }
+    pub fn x(&mut self, x: usize) -> &mut LineBuilder<'a> {
+        self.x = x;
+        self
     }
 
     /// Sets the y position
-    pub fn y(self, y: usize) -> LineBuilder<'a> {
-        LineBuilder { y, ..self }
+    pub fn y(&mut self, y: usize) -> &mut LineBuilder<'a> {
+        self.y = y;
+        self
     }
 
     /// Sets the length
-    pub fn len(self, len: usize) -> LineBuilder<'a> {
-        LineBuilder { len, ..self }
+    pub fn len(&mut self, len: usize) -> &mut LineBuilder<'a> {
+        self.len = len;
+        self
     }
 
     /// Sets the line to be vertical
-    pub fn vertical(self) -> LineBuilder<'a> {
-        LineBuilder {
-            orientation: Some(LineOrientation::Vertical),
-            ..self
-        }
+    pub fn vertical(&mut self) -> &mut LineBuilder<'a> {
+        self.orientation = Some(LineOrientation::Vertical);
+        self
     }
 
     /// Sets the line to be horizontal
-    pub fn horizontal(self) -> LineBuilder<'a> {
-        LineBuilder {
-            orientation: Some(LineOrientation::Horizontal),
-            ..self
-        }
+    pub fn horizontal(&mut self) -> &mut LineBuilder<'a> {
+        self.orientation = Some(LineOrientation::Horizontal);
+        self
     }
 
     /// Sets the forground color
-    pub fn fg(self, color: Color) -> LineBuilder<'a> {
-        LineBuilder {
-            fg: Some(color),
-            ..self
-        }
+    pub fn fg(&mut self, color: Color) -> &mut LineBuilder<'a> {
+        self.fg = Some(color);
+        self
     }
 
     /// Sets to background color
-    pub fn bg(self, color: Color) -> LineBuilder<'a> {
-        LineBuilder {
-            bg: Some(color),
-            ..self
-        }
+    pub fn bg(&mut self, color: Color) -> &mut LineBuilder<'a> {
+        self.bg = Some(color);
+        self
     }
 
     /// Adds a style
-    pub fn style(self, style: Style) -> LineBuilder<'a> {
+    pub fn style(&mut self, style: Style) -> &mut LineBuilder<'a> {
         let styles = self.style.unwrap_or_default();
-        LineBuilder {
-            style: Some(styles | style),
-            ..self
-        }
+        self.style = Some(styles | style);
+        self
     }
 
     /// Adds multiple styles
-    pub fn styles(self, styles: Style) -> LineBuilder<'a> {
+    pub fn styles(&mut self, styles: Style) -> &mut LineBuilder<'a> {
         let old_styles = self.style.unwrap_or_default();
-        LineBuilder {
-            style: Some(old_styles | styles),
-            ..self
-        }
+        self.style = Some(old_styles | styles);
+        self
     }
 
     /// Writes the line to the terminal buffer
-    pub fn build(self) {
+    pub fn build(&mut self) {
         match self.orientation {
             None | Some(LineOrientation::Horizontal) => {
+                let mut builder = CellBuilder::new('─');
+                let horizontal = builder
+                    .maybe_fg(self.fg)
+                    .maybe_bg(self.bg)
+                    .maybe_styles(self.style);
                 for i in self.x..(self.len + self.x) {
-                    let cell = CellBuilder::new('─')
-                        .maybe_fg(self.fg)
-                        .maybe_bg(self.bg)
-                        .maybe_styles(self.style.clone())
-                        .build();
+                    let cell = horizontal.build();
                     set_cell(self.buf, cell, i, self.y);
                 }
             }
             Some(LineOrientation::Vertical) => {
                 for i in self.y..self.len + self.y {
-                    let cell = CellBuilder::new('│')
+                    let mut builder = CellBuilder::new('│');
+                    let vertical = builder
                         .maybe_fg(self.fg)
                         .maybe_bg(self.bg)
-                        .maybe_styles(self.style.clone())
-                        .build();
+                        .maybe_styles(self.style);
+                    let cell = vertical.build();
                     set_cell(self.buf, cell, self.x, i);
                 }
             }
