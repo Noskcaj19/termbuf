@@ -1,4 +1,4 @@
-#![allow(non_upper_case_globals)]
+#![allow(unknown_lints, non_upper_case_globals, unreadable_literal)]
 use std::fmt;
 use termion::style;
 

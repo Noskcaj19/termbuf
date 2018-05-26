@@ -150,7 +150,7 @@ impl<'a> StyleCellBuilder<'a> {
                 content: ch,
                 fg: self.fg,
                 bg: self.bg,
-                style: self.style.clone(),
+                style: self.style,
                 width: width as u8,
             };
             if let Some(line) = self.buf.get_mut(self.y) {
