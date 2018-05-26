@@ -55,7 +55,7 @@ impl CellBuilder {
 
     /// Adds a style
     pub fn style(self, style: Style) -> CellBuilder {
-        let mut styles = self.style.unwrap_or_default();
+        let styles = self.style.unwrap_or_default();
         CellBuilder {
             style: Some(styles | style),
             ..self
@@ -64,7 +64,7 @@ impl CellBuilder {
 
     /// Adds multiple styles
     pub fn styles(self, styles: Style) -> CellBuilder {
-        let mut old_styles = self.style.unwrap_or_default();
+        let old_styles = self.style.unwrap_or_default();
         CellBuilder {
             style: Some(old_styles | styles),
             ..self
@@ -147,7 +147,7 @@ impl<'a> StyleCellBuilder<'a> {
 
     /// Adds a style
     pub fn style(self, style: Style) -> StyleCellBuilder<'a> {
-        let mut styles = self.style.unwrap_or_default();
+        let styles = self.style.unwrap_or_default();
         StyleCellBuilder {
             style: Some(styles | style),
             ..self
@@ -156,7 +156,7 @@ impl<'a> StyleCellBuilder<'a> {
 
     /// Adds multiple styles
     pub fn styles(self, styles: Style) -> StyleCellBuilder<'a> {
-        let mut old_styles = self.style.unwrap_or_default();
+        let old_styles = self.style.unwrap_or_default();
         StyleCellBuilder {
             style: Some(old_styles | styles),
             ..self
@@ -274,7 +274,7 @@ impl<'a> LineBuilder<'a> {
 
     /// Adds a style
     pub fn style(self, style: Style) -> LineBuilder<'a> {
-        let mut styles = self.style.unwrap_or_default();
+        let styles = self.style.unwrap_or_default();
         LineBuilder {
             style: Some(styles | style),
             ..self
@@ -283,7 +283,7 @@ impl<'a> LineBuilder<'a> {
 
     /// Adds multiple styles
     pub fn styles(self, styles: Style) -> LineBuilder<'a> {
-        let mut old_styles = self.style.unwrap_or_default();
+        let old_styles = self.style.unwrap_or_default();
         LineBuilder {
             style: Some(old_styles | styles),
             ..self
