@@ -74,7 +74,7 @@ impl TermCell {
             fg: None,
             bg: None,
             style: None,
-            width: ch.width().unwrap_or(1) as u8,
+            width: safe_width(ch) as u8,
         }
     }
 }
