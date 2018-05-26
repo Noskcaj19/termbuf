@@ -326,3 +326,12 @@ impl Drop for TermBuf {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::TermBuf;
+    #[test]
+    fn init() {
+        TermBuf::init().unwrap();
+    }
+}
