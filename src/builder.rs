@@ -263,3 +263,96 @@ impl<'a> LineBuilder<'a> {
         }
     }
 }
+
+/// A builder to construct a styled box
+///
+/// Create a `BoxBuilder` using [`box_builder`][::TermBuf::box_builder]
+pub struct BoxBuilder<'a> {
+    buf: &'a mut Vec<Vec<TermCell>>,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+    fg: Option<Color>,
+    bg: Option<Color>,
+    style: Option<Style>,
+}
+
+impl<'a> BoxBuilder<'a> {
+    /// Creates a new `BoxBuilder`
+    /// To be used by [`box_builder`][::TermBuf::box_builder]
+    pub(crate) fn new(
+        buf: &'a mut Vec<Vec<TermCell>>,
+        x: usize,
+        y: usize,
+        width: usize,
+        height: usize,
+    ) -> BoxBuilder<'a> {
+        BoxBuilder {
+            buf,
+            x,
+            y,
+            width,
+            height,
+            fg: None,
+            bg: None,
+            style: None,
+        }
+    }
+
+    /// Sets the x position
+    pub fn x(&mut self, x: usize) -> &mut BoxBuilder<'a> {
+        self.x = x;
+        self
+    }
+
+    /// Sets the y position
+    pub fn y(&mut self, y: usize) -> &mut BoxBuilder<'a> {
+        self.y = y;
+        self
+    }
+
+    /// Sets the width
+    pub fn width(&mut self, width: usize) -> &mut BoxBuilder<'a> {
+        self.width = width;
+        self
+    }
+
+    /// Sets the height
+    pub fn height(&mut self, height: usize) -> &mut BoxBuilder<'a> {
+        self.height = height;
+        self
+    }
+
+    impl_style_fns!(BoxBuilder<'a>);
+
+    /// Writes the line to the terminal buffer
+    pub fn build(&mut self) {
+        let mut builder = CellBuilder::new(' ');
+        let cell = builder
+            .maybe_fg(self.fg)
+            .maybe_bg(self.bg)
+            .maybe_styles(self.style);
+        let width = self.width + 1;
+        let height = self.height + 1;
+        set_cell(self.buf, cell.build_with('┌'), self.x, self.y);
+        set_cell(self.buf, cell.build_with('┐'), self.x + width, self.y);
+        set_cell(self.buf, cell.build_with('└'), self.x, self.y + height);
+        set_cell(
+            self.buf,
+            cell.build_with('┘'),
+            self.x + width,
+            self.y + height,
+        );
+
+        for i in (self.x + 1)..(width + self.x) {
+            set_cell(self.buf, cell.build_with('─'), i, self.y);
+            set_cell(self.buf, cell.build_with('─'), i, self.y + height);
+        }
+
+        for i in self.y + 1..height + self.y {
+            set_cell(self.buf, cell.build_with('│'), self.x, i);
+            set_cell(self.buf, cell.build_with('│'), self.x + width, i);
+        }
+    }
+}

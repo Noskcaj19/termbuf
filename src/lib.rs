@@ -287,10 +287,10 @@ impl TermBuf {
         }
     }
 
-    // /// Creates a builder to draw a styled box
-    // pub fn box_builder(&mut self, x: usize, y: usize, width: usize, height: usize) -> BoxBuilder {
-    //     BoxBuilder::new(&mut self.buffer, x, y, width, height)
-    // }
+    /// Creates a builder to draw a styled box
+    pub fn box_builder(&mut self, x: usize, y: usize, width: usize, height: usize) -> BoxBuilder {
+        BoxBuilder::new(&mut self.buffer, x, y, width, height)
+    }
 
     /// Draws a simple (unstyled) vertical line
     pub fn draw_vertical_line(&mut self, x: usize, y: usize, len: usize) {
