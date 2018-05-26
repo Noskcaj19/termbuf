@@ -8,6 +8,54 @@ fn set_cell<'a>(buf: &'a mut Vec<Vec<TermCell>>, cell: TermCell, x: usize, y: us
     }
 }
 
+macro_rules! impl_style_fns {
+    ($return_type:ty) => {
+        /// Sets the forground color
+        pub fn fg(&mut self, color: Color) -> &mut $return_type {
+            self.fg = Some(color);
+            self
+        }
+
+        /// Sets the background color
+        pub fn bg(&mut self, color: Color) -> &mut $return_type {
+            self.bg = Some(color);
+            self
+        }
+
+        /// Optionally sets the forground color
+        pub fn maybe_fg(&mut self, color: Option<Color>) -> &mut $return_type {
+            self.fg = color;
+            self
+        }
+
+        /// Optionally sets the background color
+        pub fn maybe_bg(&mut self, color: Option<Color>) -> &mut $return_type {
+            self.bg = color;
+            self
+        }
+
+        /// Adds a style
+        pub fn style(&mut self, style: Style) -> &mut $return_type {
+            let styles = self.style.unwrap_or_default();
+            self.style = Some(styles | style);
+            self
+        }
+
+        /// Adds multiple styles
+        pub fn styles(&mut self, styles: Style) -> &mut $return_type {
+            let old_styles = self.style.unwrap_or_default();
+            self.style = Some(old_styles | styles);
+            self
+        }
+
+        /// Sets all styles
+        pub fn maybe_styles(&mut self, styles: Option<Style>) -> &mut $return_type {
+            self.style = styles;
+            self
+        }
+    };
+}
+
 /// A builder to construct a styled cell
 pub struct CellBuilder {
     content: char,
@@ -27,49 +75,7 @@ impl CellBuilder {
         }
     }
 
-    /// Sets the forground color
-    pub fn fg(&mut self, color: Color) -> &mut CellBuilder {
-        self.fg = Some(color);
-        self
-    }
-
-    /// Sets the background color
-    pub fn bg(&mut self, color: Color) -> &mut CellBuilder {
-        self.bg = Some(color);
-        self
-    }
-
-    /// Optionally sets the forground color
-    pub fn maybe_fg(&mut self, color: Option<Color>) -> &mut CellBuilder {
-        self.fg = color;
-        self
-    }
-
-    /// Optionally sets the background color
-    pub fn maybe_bg(&mut self, color: Option<Color>) -> &mut CellBuilder {
-        self.bg = color;
-        self
-    }
-
-    /// Adds a style
-    pub fn style(&mut self, style: Style) -> &mut CellBuilder {
-        let styles = self.style.unwrap_or_default();
-        self.style = Some(styles | style);
-        self
-    }
-
-    /// Adds multiple styles
-    pub fn styles(&mut self, styles: Style) -> &mut CellBuilder {
-        let old_styles = self.style.unwrap_or_default();
-        self.style = Some(old_styles | styles);
-        self
-    }
-
-    /// Sets all styles
-    pub fn maybe_styles(&mut self, styles: Option<Style>) -> &mut CellBuilder {
-        self.style = styles;
-        self
-    }
+    impl_style_fns!(CellBuilder);
 
     /// Sets the character
     pub fn char(&mut self, content: char) -> &mut CellBuilder {
@@ -87,9 +93,20 @@ impl CellBuilder {
             width: safe_width(self.content) as u8,
         }
     }
+
+    /// Same as `build` but uses a different character
+    pub fn build_with(&mut self, ch: char) -> TermCell {
+        TermCell {
+            content: ch,
+            fg: self.fg,
+            bg: self.bg,
+            style: self.style,
+            width: safe_width(self.content) as u8,
+        }
+    }
 }
 
-/// A builder to construct a set styled cells, not to be created directly
+/// A builder to construct a set styled cells
 ///
 /// Create a `StyleCellBuilder` using [`char_builder`][::TermBuf::char_builder] and [`string_builder`][::TermBuf::string_builder]
 pub struct StyleCellBuilder<'a> {
@@ -122,31 +139,7 @@ impl<'a> StyleCellBuilder<'a> {
         }
     }
 
-    /// Sets the forground color
-    pub fn fg(&mut self, color: Color) -> &mut StyleCellBuilder<'a> {
-        self.fg = Some(color);
-        self
-    }
-
-    /// Sets to background color
-    pub fn bg(&mut self, color: Color) -> &mut StyleCellBuilder<'a> {
-        self.bg = Some(color);
-        self
-    }
-
-    /// Adds a style
-    pub fn style(&mut self, style: Style) -> &mut StyleCellBuilder<'a> {
-        let styles = self.style.unwrap_or_default();
-        self.style = Some(styles | style);
-        self
-    }
-
-    /// Adds multiple styles
-    pub fn styles(&mut self, styles: Style) -> &mut StyleCellBuilder<'a> {
-        let old_styles = self.style.unwrap_or_default();
-        self.style = Some(old_styles | styles);
-        self
-    }
+    impl_style_fns!(StyleCellBuilder<'a>);
 
     /// Writes all the new content to the terminal buffer
     pub fn build(&mut self) {
@@ -175,7 +168,7 @@ enum LineOrientation {
     Vertical,
 }
 
-/// A builder to construct a styled line, not to be created directly
+/// A builder to construct a styled line
 ///
 /// Create a `LineBuilder` using [`line_builder`][::TermBuf::line_builder]
 pub struct LineBuilder<'a> {
@@ -240,31 +233,7 @@ impl<'a> LineBuilder<'a> {
         self
     }
 
-    /// Sets the forground color
-    pub fn fg(&mut self, color: Color) -> &mut LineBuilder<'a> {
-        self.fg = Some(color);
-        self
-    }
-
-    /// Sets to background color
-    pub fn bg(&mut self, color: Color) -> &mut LineBuilder<'a> {
-        self.bg = Some(color);
-        self
-    }
-
-    /// Adds a style
-    pub fn style(&mut self, style: Style) -> &mut LineBuilder<'a> {
-        let styles = self.style.unwrap_or_default();
-        self.style = Some(styles | style);
-        self
-    }
-
-    /// Adds multiple styles
-    pub fn styles(&mut self, styles: Style) -> &mut LineBuilder<'a> {
-        let old_styles = self.style.unwrap_or_default();
-        self.style = Some(old_styles | styles);
-        self
-    }
+    impl_style_fns!(LineBuilder<'a>);
 
     /// Writes the line to the terminal buffer
     pub fn build(&mut self) {
