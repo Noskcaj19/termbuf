@@ -5,10 +5,14 @@ extern crate unicode_width;
 
 use unicode_width::UnicodeWidthChar;
 
-use std::io::{stdout, Error, Stdout, Write};
+#[cfg(not(test))]
+use std::io::{stdout, Stdout};
+use std::io::{Error, Write};
 
 use termion::color::{Bg, Fg};
+#[cfg(not(test))]
 use termion::raw::{IntoRawMode, RawTerminal};
+#[cfg(not(test))]
 use termion::screen::AlternateScreen;
 
 pub mod builder;
@@ -82,7 +86,10 @@ impl TermCell {
 /// A buffered terminal interface, using a cell-based api
 pub struct TermBuf {
     /// The underlying, unbuffered, `RawTerminal`
+    #[cfg(not(test))]
     pub terminal: AlternateScreen<RawTerminal<Stdout>>,
+    #[cfg(test)]
+    pub terminal: ::std::io::Sink,
     /// Whether or not the cursor will be shown
     pub cursor: bool,
     /// The position of the cursor, 1 indexed
@@ -98,7 +105,10 @@ impl TermBuf {
     pub fn init() -> Result<TermBuf, Error> {
         let size = termion::terminal_size()?;
         Ok(TermBuf {
+            #[cfg(not(test))]
             terminal: AlternateScreen::from(stdout().into_raw_mode()?),
+            #[cfg(test)]
+            terminal: ::std::io::sink(),
             cursor: true,
             cursor_pos: (1, 1),
             buffer: vec![vec![TermCell::empty(); size.0 as usize]; size.1 as usize],
@@ -258,11 +268,21 @@ impl TermBuf {
     }
 
     /// Gets size of the terminal
+    #[cfg(not(test))]
     pub fn size(&self) -> Result<TermSize, Error> {
         let rawsize = termion::terminal_size()?;
         Ok(TermSize {
             width: rawsize.0 as usize,
             height: rawsize.1 as usize,
+        })
+    }
+
+    /// Gets size of the terminal
+    #[cfg(test)]
+    pub fn size(&self) -> Result<TermSize, Error> {
+        Ok(TermSize {
+            width: 80,
+            height: 25,
         })
     }
 
@@ -328,9 +348,88 @@ impl Drop for TermBuf {
 
 #[cfg(test)]
 mod test {
-    use super::TermBuf;
+    use super::{TermBuf, TermCell};
+
     #[test]
     fn init() {
         TermBuf::init().unwrap();
+    }
+
+    #[test]
+    fn drop_check() {
+        let mut term = TermBuf::init().unwrap();
+        term.set_cursor_visible(false).unwrap();
+        // TODO: Find a way to check the value after the drop
+    }
+
+    #[test]
+    fn set_char() {
+        let mut term = TermBuf::init().unwrap();
+        term.set_char('*', 0, 0);
+        assert_eq!(term.buffer[0][0], TermCell::with_char('*'));
+
+        // Test change buffer
+        term.draw().unwrap();
+        assert_eq!(term.prev_buffer[0][0], TermCell::with_char('*'));
+    }
+
+    #[test]
+    fn set_char_pos() {
+        let mut term = TermBuf::init().unwrap();
+        term.set_char('*', 5, 5);
+        assert_eq!(term.buffer[5][5], TermCell::with_char('*'));
+
+        // Test change buffer
+        term.draw().unwrap();
+        assert_eq!(term.prev_buffer[5][5], TermCell::with_char('*'));
+    }
+
+    #[test]
+    fn put_str() {
+        let mut term = TermBuf::init().unwrap();
+        let test_str = "foo-bar baz";
+        term.put_string(test_str, 0, 0);
+
+        for (i, ch) in test_str.chars().enumerate() {
+            assert_eq!(term.buffer[0][i], TermCell::with_char(ch))
+        }
+
+        // Test change buffer
+        term.draw().unwrap();
+        for (i, ch) in test_str.chars().enumerate() {
+            assert_eq!(term.prev_buffer[0][i], TermCell::with_char(ch))
+        }
+    }
+
+    #[test]
+    fn put_str_pos() {
+        let mut term = TermBuf::init().unwrap();
+        let test_str = "foo-bar baz";
+        term.put_string(test_str, 5, 5);
+
+        for (i, ch) in test_str.chars().enumerate() {
+            assert_eq!(term.buffer[5][i + 5], TermCell::with_char(ch))
+        }
+
+        // Test change buffer
+        term.draw().unwrap();
+        for (i, ch) in test_str.chars().enumerate() {
+            assert_eq!(term.prev_buffer[5][i + 5], TermCell::with_char(ch))
+        }
+    }
+
+    #[test]
+    fn clear() {
+        let mut term = TermBuf::init().unwrap();
+        term.set_char('*', 5, 5);
+        term.draw().unwrap();
+        assert_eq!(term.buffer[5][5], TermCell::with_char('*'));
+
+        term.clear().unwrap();
+        for y in &term.buffer {
+            for x in y {
+                assert_eq!(x, &TermCell::empty())
+            }
+        }
     }
 }
