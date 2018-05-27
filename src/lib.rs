@@ -172,19 +172,18 @@ impl TermBuf {
     /// Draws the internal buffer to the terminal
     pub fn draw(&mut self) -> Result<(), Error> {
         for (y, line) in self.buffer.iter().enumerate() {
-            let y = y + 1;
             // If the buffer line is empty, make sure the line is empty in the terminal
             if line.iter().all(|x| *x == TermCell::empty()) {
                 write!(
                     self.terminal,
                     "{}{}",
-                    termion::cursor::Goto(1, y as u16),
+                    termion::cursor::Goto(1, y as u16 + 1),
                     termion::clear::CurrentLine
                 )?;
             }
 
             if Some(line) != self.prev_buffer.get(y) {
-                write!(self.terminal, "{}", termion::cursor::Goto(1, y as u16))?;
+                write!(self.terminal, "{}", termion::cursor::Goto(1, y as u16 + 1))?;
                 let mut x = 0;
                 while x < line.len() {
                     let cell = &line[x];
