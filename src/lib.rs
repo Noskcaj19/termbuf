@@ -33,6 +33,25 @@ pub fn safe_width(ch: char) -> usize {
     }
 }
 
+/// Gets size of the terminal
+#[cfg(not(test))]
+fn size() -> Result<TermSize, Error> {
+    let rawsize = termion::terminal_size()?;
+    Ok(TermSize {
+        width: rawsize.0 as usize,
+        height: rawsize.1 as usize,
+    })
+}
+
+/// Gets size of the terminal
+#[cfg(test)]
+fn size() -> Result<TermSize, Error> {
+    Ok(TermSize {
+        width: 80,
+        height: 25,
+    })
+}
+
 /// Represents the size of the terminal
 #[derive(Debug, Copy, Clone)]
 pub struct TermSize {
@@ -103,7 +122,7 @@ pub struct TermBuf {
 impl TermBuf {
     /// Creates a new TermBuf and switches to raw mode
     pub fn init() -> Result<TermBuf, Error> {
-        let size = termion::terminal_size()?;
+        let size = size()?;
         Ok(TermBuf {
             #[cfg(not(test))]
             terminal: AlternateScreen::from(stdout().into_raw_mode()?),
@@ -111,8 +130,8 @@ impl TermBuf {
             terminal: ::std::io::sink(),
             cursor: true,
             cursor_pos: (1, 1),
-            buffer: vec![vec![TermCell::empty(); size.0 as usize]; size.1 as usize],
-            prev_buffer: vec![vec![TermCell::empty(); size.0 as usize]; size.1 as usize],
+            buffer: vec![vec![TermCell::empty(); size.width as usize]; size.height as usize],
+            prev_buffer: vec![vec![TermCell::empty(); size.width as usize]; size.height as usize],
         })
     }
 
