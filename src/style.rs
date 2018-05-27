@@ -3,7 +3,7 @@ use std::fmt;
 use termion::style;
 
 bitflags! {
-    /// Represents a single cell style, not all terminals support all of these styles
+    /// Represents the style of a cell, not all terminals support all of these styles
     ///
     /// See the [termion docs](::termion::style) for details
     #[derive(Default)]
