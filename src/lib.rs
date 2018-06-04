@@ -35,7 +35,7 @@ pub fn safe_width(ch: char) -> usize {
 
 /// Gets size of the terminal
 #[cfg(not(test))]
-fn size() -> Result<TermSize, Error> {
+pub fn size() -> Result<TermSize, Error> {
     let rawsize = termion::terminal_size()?;
     Ok(TermSize {
         width: rawsize.0 as usize,
@@ -45,7 +45,7 @@ fn size() -> Result<TermSize, Error> {
 
 /// Gets size of the terminal
 #[cfg(test)]
-fn size() -> Result<TermSize, Error> {
+pub fn size() -> Result<TermSize, Error> {
     Ok(TermSize {
         width: 80,
         height: 25,
