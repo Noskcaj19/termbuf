@@ -139,7 +139,7 @@ impl TermBuf {
     pub fn put_string(&mut self, s: &str, mut x: usize, y: usize) {
         for ch in s.chars() {
             self.set_char(ch, x, y);
-            x += 1;
+            x += safe_width(ch);
         }
     }
 
@@ -241,7 +241,7 @@ impl TermBuf {
                     if has_style {
                         write!(self.terminal, "{}", termion::style::Reset)?;
                     }
-                    x += safe_width(line[x].content);
+                    x += line[x].width as usize;
                 }
                 if let Some(mut old_line) = self.prev_buffer.get_mut(y) {
                     *old_line = line.clone();
