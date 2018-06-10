@@ -24,7 +24,7 @@ pub use style::Style;
 use builder::*;
 
 /// Returns the width of a char if it is greater than zero, or one if it is zero
-pub fn safe_width(ch: char) -> usize {
+pub fn display_width(ch: char) -> usize {
     let width = ch.width().unwrap_or(1);
     if width == 0 {
         1
@@ -64,7 +64,7 @@ pub struct TermSize {
 /// A single cell in the terminal
 ///
 /// To create styled cells, see [`builder::CellBuilder`]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TermCell {
     /// Character content of the cell
     pub content: char,
@@ -97,7 +97,7 @@ impl TermCell {
             fg: None,
             bg: None,
             style: None,
-            width: safe_width(ch) as u8,
+            width: display_width(ch) as u8,
         }
     }
 }
@@ -136,15 +136,16 @@ impl TermBuf {
     }
 
     /// Writes an entire string
-    pub fn put_string(&mut self, s: &str, mut x: usize, y: usize) {
+    pub fn print(&mut self, x: usize, y: usize, s: &str) {
+        let mut x = x;
         for ch in s.chars() {
-            self.set_char(ch, x, y);
-            x += safe_width(ch);
+            self.set_char(x, y, ch);
+            x += display_width(ch);
         }
     }
 
     /// Writes a single char
-    pub fn set_char(&mut self, ch: char, x: usize, y: usize) {
+    pub fn set_char(&mut self, x: usize, y: usize, ch: char) {
         if let Some(line) = self.buffer.get_mut(y) {
             if let Some(mut old_ch) = line.get_mut(x) {
                 *old_ch = TermCell::with_char(ch);
@@ -153,7 +154,7 @@ impl TermBuf {
     }
 
     /// Writes a single cell
-    pub fn set_cell(&mut self, cell: TermCell, x: usize, y: usize) {
+    pub fn set_cell(&mut self, x: usize, y: usize, cell: TermCell) {
         if let Some(line) = self.buffer.get_mut(y) {
             if let Some(mut old_ch) = line.get_mut(x) {
                 *old_ch = cell;
@@ -162,7 +163,7 @@ impl TermBuf {
     }
 
     /// Replaces the forground of a cell
-    pub fn set_cell_fg(&mut self, fg: Color, x: usize, y: usize) {
+    pub fn set_cell_fg(&mut self, x: usize, y: usize, fg: Color) {
         if let Some(line) = self.buffer.get_mut(y) {
             if let Some(mut old_cell) = line.get_mut(x) {
                 old_cell.fg = Some(fg);
@@ -171,7 +172,7 @@ impl TermBuf {
     }
 
     /// Replaces the background of a cell
-    pub fn set_cell_bg(&mut self, bg: Color, x: usize, y: usize) {
+    pub fn set_cell_bg(&mut self, x: usize, y: usize, bg: Color) {
         if let Some(line) = self.buffer.get_mut(y) {
             if let Some(mut old_cell) = line.get_mut(x) {
                 old_cell.bg = Some(bg);
@@ -180,7 +181,7 @@ impl TermBuf {
     }
 
     /// Replaces the style of a cell
-    pub fn set_cell_style(&mut self, style: Style, x: usize, y: usize) {
+    pub fn set_cell_style(&mut self, x: usize, y: usize, style: Style) {
         if let Some(line) = self.buffer.get_mut(y) {
             if let Some(mut old_cell) = line.get_mut(x) {
                 old_cell.style = Some(style);
@@ -189,17 +190,17 @@ impl TermBuf {
     }
 
     /// Writes a single char with color builder
-    pub fn char_builder(&mut self, ch: char, x: usize, y: usize) -> StyleCellBuilder {
-        StyleCellBuilder::new(&mut self.buffer, ch.to_string(), x, y)
+    pub fn char_builder(&mut self, x: usize, y: usize, ch: char) -> StyleCellBuilder {
+        StyleCellBuilder::new(&mut self.buffer, x, y, ch.to_string())
     }
 
     /// Writes a string with color builder
-    pub fn string_builder(&mut self, s: &str, x: usize, y: usize) -> StyleCellBuilder {
-        StyleCellBuilder::new(&mut self.buffer, s.to_owned(), x, y)
+    pub fn string_builder(&mut self, x: usize, y: usize, s: &str) -> StyleCellBuilder {
+        StyleCellBuilder::new(&mut self.buffer, x, y, s.to_owned())
     }
 
-    /// Draws the internal buffer to the terminal
-    pub fn draw(&mut self) -> Result<(), Error> {
+    /// Flushes the internal buffer to the terminal
+    pub fn flush(&mut self) -> Result<(), Error> {
         for (y, line) in self.buffer.iter().enumerate() {
             // If the buffer line is empty, make sure the line is empty in the terminal
             if line.iter().all(|x| *x == TermCell::empty()) {
@@ -281,47 +282,33 @@ impl TermBuf {
         }
     }
 
-    /// Sets cursor position
+    /// Sets cursor position, uses 1 based coordinates
     pub fn set_cursor_position(&mut self, x: usize, y: usize) {
         self.cursor_pos = (x, y);
     }
 
     /// Gets size of the terminal
-    #[cfg(not(test))]
     pub fn size(&self) -> Result<TermSize, Error> {
-        let rawsize = termion::terminal_size()?;
-        Ok(TermSize {
-            width: rawsize.0 as usize,
-            height: rawsize.1 as usize,
-        })
-    }
-
-    /// Gets size of the terminal
-    #[cfg(test)]
-    pub fn size(&self) -> Result<TermSize, Error> {
-        Ok(TermSize {
-            width: 80,
-            height: 25,
-        })
+        size()
     }
 
     /// Draws a simple (unstyled) unicode box
     pub fn draw_box(&mut self, x: usize, y: usize, width: usize, height: usize) {
         let width = width + 1;
         let height = height + 1;
-        self.set_char('┌', x, y);
-        self.set_char('┐', x + width, y);
-        self.set_char('└', x, y + height);
-        self.set_char('┘', x + width, y + height);
+        self.set_char(x, y, '┌');
+        self.set_char(x + width, y, '┐');
+        self.set_char(x, y + height, '└');
+        self.set_char(x + width, y + height, '┘');
 
         for i in (x + 1)..(width + x) {
-            self.set_char('─', i, y);
-            self.set_char('─', i, y + height);
+            self.set_char(i, y, '─');
+            self.set_char(i, y + height, '─');
         }
 
         for i in y + 1..height + y {
-            self.set_char('│', x, i);
-            self.set_char('│', x + width, i);
+            self.set_char(x, i, '│');
+            self.set_char(x + width, i, '│');
         }
     }
 
@@ -333,14 +320,14 @@ impl TermBuf {
     /// Draws a simple (unstyled) vertical line
     pub fn draw_vertical_line(&mut self, x: usize, y: usize, len: usize) {
         for i in y..len + y {
-            self.set_char('│', x, i);
+            self.set_char(x, i, '│');
         }
     }
 
     /// Draws a simple (unstyled) horizontal line
     pub fn draw_horiztonal_line(&mut self, x: usize, y: usize, len: usize) {
         for i in x..(len + x) {
-            self.set_char('─', i, y);
+            self.set_char(i, y, '─');
         }
     }
 
@@ -351,8 +338,12 @@ impl TermBuf {
 
     /// Empties buffer
     pub fn clear(&mut self) -> Result<(), Error> {
-        let size = self.size()?;
-        self.buffer = vec![vec![TermCell::empty(); size.width as usize]; size.height as usize];
+        let blank = TermCell::empty();
+        for y in &mut self.buffer {
+            for cell in y {
+                *cell = blank;
+            }
+        }
         Ok(())
     }
 }
@@ -384,22 +375,22 @@ mod test {
     #[test]
     fn set_char() {
         let mut term = TermBuf::init().unwrap();
-        term.set_char('*', 0, 0);
+        term.set_char(0, 0, '*');
         assert_eq!(term.buffer[0][0], TermCell::with_char('*'));
 
         // Test change buffer
-        term.draw().unwrap();
+        term.flush().unwrap();
         assert_eq!(term.prev_buffer[0][0], TermCell::with_char('*'));
     }
 
     #[test]
     fn set_char_pos() {
         let mut term = TermBuf::init().unwrap();
-        term.set_char('*', 5, 5);
+        term.set_char(5, 5, '*');
         assert_eq!(term.buffer[5][5], TermCell::with_char('*'));
 
         // Test change buffer
-        term.draw().unwrap();
+        term.flush().unwrap();
         assert_eq!(term.prev_buffer[5][5], TermCell::with_char('*'));
     }
 
@@ -407,14 +398,14 @@ mod test {
     fn put_str() {
         let mut term = TermBuf::init().unwrap();
         let test_str = "foo-bar baz";
-        term.put_string(test_str, 0, 0);
+        term.print(0, 0, test_str);
 
         for (i, ch) in test_str.chars().enumerate() {
             assert_eq!(term.buffer[0][i], TermCell::with_char(ch))
         }
 
         // Test change buffer
-        term.draw().unwrap();
+        term.flush().unwrap();
         for (i, ch) in test_str.chars().enumerate() {
             assert_eq!(term.prev_buffer[0][i], TermCell::with_char(ch))
         }
@@ -424,14 +415,14 @@ mod test {
     fn put_str_pos() {
         let mut term = TermBuf::init().unwrap();
         let test_str = "foo-bar baz";
-        term.put_string(test_str, 5, 5);
+        term.print(5, 5, test_str);
 
         for (i, ch) in test_str.chars().enumerate() {
             assert_eq!(term.buffer[5][i + 5], TermCell::with_char(ch))
         }
 
         // Test change buffer
-        term.draw().unwrap();
+        term.flush().unwrap();
         for (i, ch) in test_str.chars().enumerate() {
             assert_eq!(term.prev_buffer[5][i + 5], TermCell::with_char(ch))
         }
@@ -440,8 +431,8 @@ mod test {
     #[test]
     fn clear() {
         let mut term = TermBuf::init().unwrap();
-        term.set_char('*', 5, 5);
-        term.draw().unwrap();
+        term.set_char(5, 5, '*');
+        term.flush().unwrap();
         assert_eq!(term.buffer[5][5], TermCell::with_char('*'));
 
         term.clear().unwrap();

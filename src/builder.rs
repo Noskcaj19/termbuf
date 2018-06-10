@@ -1,4 +1,4 @@
-use {safe_width, Color, Style, TermCell};
+use {display_width, Color, Style, TermCell};
 
 fn set_cell<'a>(buf: &'a mut Vec<Vec<TermCell>>, cell: TermCell, x: usize, y: usize) {
     if let Some(line) = buf.get_mut(y) {
@@ -22,13 +22,13 @@ macro_rules! impl_style_fns {
             self
         }
 
-        /// Optionally sets the forground color
+        /// Sets the forground color to an Option
         pub fn maybe_fg(&mut self, color: Option<Color>) -> &mut $return_type {
             self.fg = color;
             self
         }
 
-        /// Optionally sets the background color
+        /// Sets the background color to an Option
         pub fn maybe_bg(&mut self, color: Option<Color>) -> &mut $return_type {
             self.bg = color;
             self
@@ -90,7 +90,7 @@ impl CellBuilder {
             fg: self.fg,
             bg: self.bg,
             style: self.style,
-            width: safe_width(self.content) as u8,
+            width: display_width(self.content) as u8,
         }
     }
 
@@ -101,7 +101,7 @@ impl CellBuilder {
             fg: self.fg,
             bg: self.bg,
             style: self.style,
-            width: safe_width(self.content) as u8,
+            width: display_width(self.content) as u8,
         }
     }
 }
@@ -111,9 +111,9 @@ impl CellBuilder {
 /// Create a `StyleCellBuilder` using [`char_builder`][::TermBuf::char_builder] and [`string_builder`][::TermBuf::string_builder]
 pub struct StyleCellBuilder<'a> {
     buf: &'a mut Vec<Vec<TermCell>>,
-    content: String,
     x: usize,
     y: usize,
+    content: String,
     fg: Option<Color>,
     bg: Option<Color>,
     style: Option<Style>,
@@ -124,9 +124,9 @@ impl<'a> StyleCellBuilder<'a> {
     /// To be used by [`char_builder`][::TermBuf::char_builder] and [`string_builder`][::TermBuf::string_builder]
     pub(crate) fn new(
         buf: &'a mut Vec<Vec<TermCell>>,
-        content: String,
         x: usize,
         y: usize,
+        content: String,
     ) -> StyleCellBuilder<'a> {
         StyleCellBuilder {
             buf,
@@ -142,10 +142,10 @@ impl<'a> StyleCellBuilder<'a> {
     impl_style_fns!(StyleCellBuilder<'a>);
 
     /// Writes all the new content to the terminal buffer
-    pub fn build(&mut self) {
+    pub fn draw(&mut self) {
         let mut x = self.x;
         for ch in self.content.chars() {
-            let width = safe_width(ch);
+            let width = display_width(ch);
             let new_cell = TermCell {
                 content: ch,
                 fg: self.fg,
@@ -221,13 +221,13 @@ impl<'a> LineBuilder<'a> {
         self
     }
 
-    /// Sets the line to be vertical
+    /// Sets the line orientation to vertical
     pub fn vertical(&mut self) -> &mut LineBuilder<'a> {
         self.orientation = Some(LineOrientation::Vertical);
         self
     }
 
-    /// Sets the line to be horizontal
+    /// Sets the line orientation to horizontal
     pub fn horizontal(&mut self) -> &mut LineBuilder<'a> {
         self.orientation = Some(LineOrientation::Horizontal);
         self
@@ -236,7 +236,7 @@ impl<'a> LineBuilder<'a> {
     impl_style_fns!(LineBuilder<'a>);
 
     /// Writes the line to the terminal buffer
-    pub fn build(&mut self) {
+    pub fn draw(&mut self) {
         match self.orientation {
             None | Some(LineOrientation::Horizontal) => {
                 let mut builder = CellBuilder::new('─');
@@ -327,7 +327,7 @@ impl<'a> BoxBuilder<'a> {
     impl_style_fns!(BoxBuilder<'a>);
 
     /// Writes the line to the terminal buffer
-    pub fn build(&mut self) {
+    pub fn draw(&mut self) {
         let mut builder = CellBuilder::new(' ');
         let cell = builder
             .maybe_fg(self.fg)

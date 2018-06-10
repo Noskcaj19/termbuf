@@ -8,16 +8,16 @@ fn main() {
     let width = buf.size().unwrap().width;
 
     // Write a string
-    buf.put_string("Hello World!", width / 2, 0);
+    buf.print(width / 2, 0, "Hello World!");
 
     // Write a string with attributes
-    buf.string_builder("Blue", 0, 2)
+    buf.string_builder(0, 2, "Blue")
         .fg(Color::Blue)
         .style(Style::Italic)
-        .build();
+        .draw();
 
     // Write to the terminal
-    buf.draw().expect("Error flushing to terminal");
+    buf.flush().expect("Error flushing to terminal");
 
     // Wait for a keypress
     stdin().keys().next();

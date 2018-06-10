@@ -29,11 +29,11 @@ use termbuf::termion::input::TermRead;
 fn main() {
     let mut buf = termbuf::TermBuf::init().expect("Unable to attach to terminal");
 
-    // Write a string
-    buf.put_string("Hello World!", 5, 0);
+    // Write a string a 5 cells from the left on the first line
+    buf.print("Hello World!", 5, 0);
 
-    // Write to the terminal
-    buf.draw().expect("Error flushing to terminal");
+    // Flush to the terminal
+    buf.flush().expect("Error flushing to terminal");
 
     // Wait for a keypress
     stdin().keys().next();

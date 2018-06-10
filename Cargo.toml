@@ -1,6 +1,6 @@
 [package]
 name = "termbuf"
-version = "1.5.2"
+version = "2.0.0"
 authors = ["Noskcaj <kcajdev@gmail.com>"]
 
 [dependencies]
